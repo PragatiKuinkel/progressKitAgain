@@ -181,25 +181,6 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     <!-- Main Content -->
     <div class="main-content">
-        <!-- Top Navigation -->
-        <header class="top-nav">
-            <div class="search-bar">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Search users...">
-            </div>
-            <div class="user-info">
-                <div class="notifications">
-                    <i class="fas fa-bell"></i>
-                    <span class="badge">3</span>
-                </div>
-                <div class="user-profile">
-                    <img src="../assets/images/admin-avatar.jpg" alt="Admin">
-                    <span><?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
-                </div>
-            </div>
-        </header>
-
-        <!-- Users Content -->
         <div class="content-wrapper">
             <div class="content-header">
                 <h1>User Management</h1>

@@ -45,148 +45,107 @@ try {
 <body class="light-mode">
     <!-- Sidebar -->
     <div class="sidebar">
-        <div class="sidebar-logo">
-            <img src="../assets/images/progress-kit-logo.png" alt="Progress Kit">
-        </div>
-        <nav class="sidebar-nav">
-            <ul>
-                <li class="active">
-                    <a href="dashboard.php">
-                        <i class="fas fa-home"></i>
-                        <span>Dashboard</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="users.php">
-                        <i class="fas fa-users"></i>
-                        <span>User Management</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="events.php">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>Event Management</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="registrations.php">
-                        <i class="fas fa-clipboard-list"></i>
-                        <span>Registrations</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="announcements.php">
-                        <i class="fas fa-bullhorn"></i>
-                        <span>Announcements</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="reports.php">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>Reports & Analytics</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="settings.php">
-                        <i class="fas fa-cog"></i>
-                        <span>Settings</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
-        <div class="sidebar-footer">
-            <button id="theme-toggle" class="btn btn-icon">
-                <i class="fas fa-moon"></i>
-                <span>Dark Mode</span>
-            </button>
-            <a href="../logout.php" class="btn btn-danger">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Logout</span>
-            </a>
-        </div>
+        <?php include 'includes/sidebar.php'; ?>
     </div>
 
     <!-- Main Content -->
     <div class="main-content">
-        <!-- Top Navigation -->
-        <header class="top-nav">
-            <div class="search-bar">
-                <i class="fas fa-search"></i>
-                <input type="text" placeholder="Search...">
-            </div>
-            <div class="user-info">
-                <div class="notifications">
-                    <i class="fas fa-bell"></i>
-                    <span class="badge">3</span>
-                </div>
-                <div class="user-profile">
-                    <img src="../assets/images/admin-avatar.jpg" alt="Admin">
-                    <span><?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
-                </div>
-            </div>
-        </header>
-
         <!-- Dashboard Content -->
         <div class="dashboard-content">
             <h1>Dashboard Overview</h1>
             
             <!-- Statistics Cards -->
             <div class="stats-grid">
+                <!-- Card 1: Total Users -->
                 <div class="stat-card">
                     <div class="stat-icon">
                         <i class="fas fa-users"></i>
                     </div>
                     <div class="stat-info">
                         <h3>Total Users</h3>
-                        <p><?php echo array_sum(array_column($userStats, 'count')); ?></p>
+                        <p>
+                            <?php
+                            // TODO: Database integration for total users
+                            // $sql = "SELECT COUNT(*) as total_users FROM users";
+                            // $stmt = $dbh->prepare($sql);
+                            // $stmt->execute();
+                            // $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                            // echo $result['total_users'];
+                            echo "–";
+                            ?>
+                        </p>
                     </div>
                 </div>
+
+                <!-- Card 2: Upcoming Events -->
                 <div class="stat-card">
                     <div class="stat-icon">
-                        <i class="fas fa-calendar-alt"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3>Total Events</h3>
-                        <p><?php echo $totalEvents; ?></p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-clock"></i>
+                        <i class="fas fa-calendar-check"></i>
                     </div>
                     <div class="stat-info">
                         <h3>Upcoming Events</h3>
-                        <p><?php echo $upcomingEvents; ?></p>
+                        <p>
+                            <?php
+                            // TODO: Database integration for upcoming events
+                            // $sql = "SELECT COUNT(*) as upcoming_events FROM events WHERE event_date > NOW()";
+                            // $stmt = $dbh->prepare($sql);
+                            // $stmt->execute();
+                            // $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                            // echo $result['upcoming_events'];
+                            echo "–";
+                            ?>
+                        </p>
                     </div>
                 </div>
+
+                <!-- Card 3: Completed Events -->
                 <div class="stat-card">
                     <div class="stat-icon">
                         <i class="fas fa-check-circle"></i>
                     </div>
                     <div class="stat-info">
                         <h3>Completed Events</h3>
-                        <p><?php echo $completedEvents; ?></p>
+                        <p>
+                            <?php
+                            // TODO: Database integration for completed events
+                            // $sql = "SELECT COUNT(*) as completed_events FROM events WHERE event_date < NOW()";
+                            // $stmt = $dbh->prepare($sql);
+                            // $stmt->execute();
+                            // $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                            // echo $result['completed_events'];
+                            echo "–";
+                            ?>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Card 4: Total Events -->
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Total Events</h3>
+                        <p>
+                            <?php
+                            // TODO: Database integration for total events
+                            // $sql = "SELECT COUNT(*) as total_events FROM events";
+                            // $stmt = $dbh->prepare($sql);
+                            // $stmt->execute();
+                            // $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                            // echo $result['total_events'];
+                            echo "–";
+                            ?>
+                        </p>
                     </div>
                 </div>
             </div>
 
-            <!-- Charts Section -->
-            <div class="charts-grid">
-                <div class="chart-card">
-                    <h3>User Distribution</h3>
-                    <canvas id="userDistributionChart"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>Event Timeline</h3>
-                    <canvas id="eventTimelineChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Recent Activity -->
-            <div class="activity-section">
-                <h3>Recent Activity</h3>
-                <div class="activity-list">
-                    <!-- Activity items will be dynamically loaded -->
+            <!-- Reports Section -->
+            <div class="reports-section">
+                <h2>Reports & Analytics</h2>
+                <div class="reports-grid">
+                    <!-- Report cards will be dynamically loaded -->
                 </div>
             </div>
         </div>
