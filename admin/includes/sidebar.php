@@ -1,3 +1,33 @@
+<?php
+// Ensure session is started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Initialize admin name with default value
+$adminName = '-';
+
+// Check if user is logged in and has an ID
+if (isset($_SESSION['user_id'])) {
+    try {
+        // Include database connection using correct path
+        require_once __DIR__ . '/../../includes/dbconnection.php';
+        
+        // Fetch admin name from database
+        $stmt = $dbh->prepare("SELECT full_name FROM users WHERE id = :id");
+        $stmt->bindParam(':id', $_SESSION['user_id'], PDO::PARAM_INT);
+        $stmt->execute();
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($result && isset($result['full_name'])) {
+            $adminName = htmlspecialchars($result['full_name']);
+        }
+    } catch (PDOException $e) {
+        error_log("Error fetching admin name: " . $e->getMessage());
+        // Keep default value if there's an error
+    }
+}
+?>
 <!-- Sidebar Header -->
 <div class="sidebar-header">
     <div class="admin-profile">
@@ -5,12 +35,7 @@
             <i class="fas fa-user-shield"></i>
         </div>
         <div class="admin-name">
-            <?php
-            // TODO: Replace with actual admin name from database
-            // $adminName = "John Doe"; // Example: Fetch from database
-            // echo htmlspecialchars($adminName);
-            echo "–";
-            ?>
+            <?php echo $adminName; ?>
         </div>
     </div>
 </div>
