@@ -191,65 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="light-mode">
     <!-- Sidebar -->
     <div class="sidebar">
-        <div class="sidebar-logo">
-            <img src="../assets/images/progress-kit-logo.png" alt="Progress Kit">
-        </div>
-        <nav class="sidebar-nav">
-            <ul>
-                <li>
-                    <a href="dashboard.php">
-                        <i class="fas fa-home"></i>
-                        <span>Dashboard</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="users.php">
-                        <i class="fas fa-users"></i>
-                        <span>User Management</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="events.php">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>Event Management</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="registrations.php">
-                        <i class="fas fa-clipboard-list"></i>
-                        <span>Registrations</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="announcements.php">
-                        <i class="fas fa-bullhorn"></i>
-                        <span>Announcements</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="reports.php">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>Reports & Analytics</span>
-                    </a>
-                </li>
-                <li class="active">
-                    <a href="settings.php">
-                        <i class="fas fa-cog"></i>
-                        <span>Settings</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
-        <div class="sidebar-footer">
-            <button id="theme-toggle" class="btn btn-icon">
-                <i class="fas fa-moon"></i>
-                <span>Dark Mode</span>
-            </button>
-            <a href="../logout.php" class="btn btn-danger">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Logout</span>
-            </a>
-        </div>
+        <?php include 'includes/sidebar.php'; ?>
     </div>
 
     <!-- Main Content -->

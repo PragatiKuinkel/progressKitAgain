@@ -10,11 +10,20 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 // Database connection
 require_once '../includes/dbconnection.php';
 
+// Initialize variables
+$totalUsers = '-';
+$totalEvents = '-';
+$upcomingEvents = '-';
+$completedEvents = '-';
+$error = null;
+
 // Get dashboard statistics
 try {
     // Total users
-    $stmt = $dbh->query("SELECT COUNT(*) as total_users FROM users");
-    $totalUsers = $stmt->fetch(PDO::FETCH_ASSOC)['total_users'];
+    $stmt = $dbh->prepare("SELECT COUNT(*) AS total_users FROM users");
+    $stmt->execute();
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $totalUsers = $result['total_users'] ?? '-';
 
     // Total users by role
     $stmt = $dbh->query("SELECT role, COUNT(*) as count FROM users GROUP BY role");
@@ -22,22 +31,21 @@ try {
 
     // Total events
     $stmt = $dbh->query("SELECT COUNT(*) as total_events FROM events");
-    $totalEvents = $stmt->fetch(PDO::FETCH_ASSOC)['total_events'];
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $totalEvents = $result['total_events'] ?? '-';
 
     // Upcoming events
     $stmt = $dbh->query("SELECT COUNT(*) as upcoming_events FROM events WHERE event_date > NOW()");
-    $upcomingEvents = $stmt->fetch(PDO::FETCH_ASSOC)['upcoming_events'];
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $upcomingEvents = $result['upcoming_events'] ?? '-';
 
     // Completed events
     $stmt = $dbh->query("SELECT COUNT(*) as completed_events FROM events WHERE event_date < NOW()");
-    $completedEvents = $stmt->fetch(PDO::FETCH_ASSOC)['completed_events'];
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $completedEvents = $result['completed_events'] ?? '-';
 } catch (PDOException $e) {
     error_log("Dashboard error: " . $e->getMessage());
     $error = "Error fetching dashboard statistics: " . $e->getMessage();
-    $totalUsers = '-';
-    $totalEvents = '-';
-    $upcomingEvents = '-';
-    $completedEvents = '-';
 }
 ?>
 <!DOCTYPE html>
@@ -61,6 +69,12 @@ try {
         <!-- Dashboard Content -->
         <div class="dashboard-content">
             <h1>Dashboard Overview</h1>
+            
+            <?php if ($error): ?>
+            <div class="alert alert-danger">
+                <?php echo htmlspecialchars($error); ?>
+            </div>
+            <?php endif; ?>
             
             <!-- Statistics Cards -->
             <div class="stats-grid">
@@ -122,25 +136,27 @@ try {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
     <script src="../assets/js/admin.js"></script>
     <script>
-        // Settings dropdown functionality
         document.addEventListener('DOMContentLoaded', function() {
+            // Only initialize settings dropdown if elements exist
             const settingsToggle = document.querySelector('.settings-toggle');
             const settingsDropdown = document.querySelector('.settings-dropdown');
             const settingsArrow = document.querySelector('.settings-arrow');
 
-            settingsToggle.addEventListener('click', function(e) {
-                e.preventDefault();
-                settingsDropdown.classList.toggle('show');
-                settingsArrow.classList.toggle('rotate');
-            });
+            if (settingsToggle && settingsDropdown && settingsArrow) {
+                settingsToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    settingsDropdown.classList.toggle('show');
+                    settingsArrow.classList.toggle('rotate');
+                });
 
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('.settings-menu')) {
-                    settingsDropdown.classList.remove('show');
-                    settingsArrow.classList.remove('rotate');
-                }
-            });
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!e.target.closest('.settings-menu')) {
+                        settingsDropdown.classList.remove('show');
+                        settingsArrow.classList.remove('rotate');
+                    }
+                });
+            }
         });
     </script>
     <style>
@@ -197,6 +213,20 @@ try {
                 position: static;
                 width: 100%;
             }
+        }
+
+        /* Alert styles */
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+
+        .alert-danger {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
         }
     </style>
 </body>
