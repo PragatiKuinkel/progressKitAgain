@@ -12,6 +12,10 @@ require_once '../includes/dbconnection.php';
 
 // Get dashboard statistics
 try {
+    // Total users
+    $stmt = $dbh->query("SELECT COUNT(*) as total_users FROM users");
+    $totalUsers = $stmt->fetch(PDO::FETCH_ASSOC)['total_users'];
+
     // Total users by role
     $stmt = $dbh->query("SELECT role, COUNT(*) as count FROM users GROUP BY role");
     $userStats = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -30,6 +34,10 @@ try {
 } catch (PDOException $e) {
     error_log("Dashboard error: " . $e->getMessage());
     $error = "Error fetching dashboard statistics: " . $e->getMessage();
+    $totalUsers = '-';
+    $totalEvents = '-';
+    $upcomingEvents = '-';
+    $completedEvents = '-';
 }
 ?>
 <!DOCTYPE html>
@@ -63,17 +71,7 @@ try {
                     </div>
                     <div class="stat-info">
                         <h3>Total Users</h3>
-                        <p>
-                            <?php
-                            // TODO: Database integration for total users
-                            // $sql = "SELECT COUNT(*) as total_users FROM users";
-                            // $stmt = $dbh->prepare($sql);
-                            // $stmt->execute();
-                            // $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                            // echo $result['total_users'];
-                            echo "–";
-                            ?>
-                        </p>
+                        <p><?php echo htmlspecialchars($totalUsers); ?></p>
                     </div>
                 </div>
 
@@ -84,17 +82,7 @@ try {
                     </div>
                     <div class="stat-info">
                         <h3>Upcoming Events</h3>
-                        <p>
-                            <?php
-                            // TODO: Database integration for upcoming events
-                            // $sql = "SELECT COUNT(*) as upcoming_events FROM events WHERE event_date > NOW()";
-                            // $stmt = $dbh->prepare($sql);
-                            // $stmt->execute();
-                            // $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                            // echo $result['upcoming_events'];
-                            echo "–";
-                            ?>
-                        </p>
+                        <p><?php echo htmlspecialchars($upcomingEvents); ?></p>
                     </div>
                 </div>
 
@@ -105,17 +93,7 @@ try {
                     </div>
                     <div class="stat-info">
                         <h3>Completed Events</h3>
-                        <p>
-                            <?php
-                            // TODO: Database integration for completed events
-                            // $sql = "SELECT COUNT(*) as completed_events FROM events WHERE event_date < NOW()";
-                            // $stmt = $dbh->prepare($sql);
-                            // $stmt->execute();
-                            // $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                            // echo $result['completed_events'];
-                            echo "–";
-                            ?>
-                        </p>
+                        <p><?php echo htmlspecialchars($completedEvents); ?></p>
                     </div>
                 </div>
 
@@ -126,17 +104,7 @@ try {
                     </div>
                     <div class="stat-info">
                         <h3>Total Events</h3>
-                        <p>
-                            <?php
-                            // TODO: Database integration for total events
-                            // $sql = "SELECT COUNT(*) as total_events FROM events";
-                            // $stmt = $dbh->prepare($sql);
-                            // $stmt->execute();
-                            // $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                            // echo $result['total_events'];
-                            echo "–";
-                            ?>
-                        </p>
+                        <p><?php echo htmlspecialchars($totalEvents); ?></p>
                     </div>
                 </div>
             </div>

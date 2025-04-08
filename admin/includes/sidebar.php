@@ -44,7 +44,7 @@
         </li>
         <li>
             <a href="messages.php">
-                <i class="fas fa-envelope"></i>
+                <i class="fas fa-comments"></i>
                 <span>Messages</span>
             </a>
         </li>
