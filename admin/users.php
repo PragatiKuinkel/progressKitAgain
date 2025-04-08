@@ -18,53 +18,16 @@ $current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $per_page = 10;
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $role_filter = isset($_GET['role']) ? $_GET['role'] : '';
-$status_filter = isset($_GET['status']) ? $_GET['status'] : '';
 
-// Handle user actions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    header('Content-Type: application/json');
-    
+// Handle role update
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_role') {
     try {
-        switch ($_POST['action']) {
-            case 'edit':
-                $stmt = $dbh->prepare("
-                    UPDATE users 
-                    SET full_name = ?, email = ?, phone = ?, role = ?
-                    WHERE id = ?
-                ");
-                $stmt->execute([
-                    $_POST['full_name'],
-                    $_POST['email'],
-                    $_POST['phone'],
-                    $_POST['role'],
-                    $_POST['id']
-                ]);
-                echo json_encode(['success' => true, 'message' => 'User updated successfully']);
-                exit();
-                break;
-
-            case 'delete':
-                $stmt = $dbh->prepare("DELETE FROM users WHERE id = ?");
-                $stmt->execute([$_POST['id']]);
-                echo json_encode(['success' => true, 'message' => 'User deleted successfully']);
-                exit();
-                break;
-
-            case 'toggle_status':
-                $stmt = $dbh->prepare("UPDATE users SET status = ? WHERE id = ?");
-                $stmt->execute([$_POST['status'], $_POST['id']]);
-                echo json_encode(['success' => true, 'message' => 'User status updated successfully']);
-                exit();
-                break;
-
-            default:
-                echo json_encode(['success' => false, 'message' => 'Invalid action']);
-                exit();
-        }
+        $stmt = $dbh->prepare("UPDATE users SET role = ? WHERE id = ?");
+        $stmt->execute([$_POST['role'], $_POST['user_id']]);
+        $success_message = "User role updated successfully";
     } catch (PDOException $e) {
-        error_log("Database error: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Database error occurred']);
-        exit();
+        error_log("Update role error: " . $e->getMessage());
+        $errors[] = "Error updating user role";
     }
 }
 
@@ -83,11 +46,6 @@ if ($role_filter) {
     $params[] = $role_filter;
 }
 
-if ($status_filter !== '') {
-    $query .= " AND status = ?";
-    $params[] = (int)$status_filter;
-}
-
 // Get total users count
 $count_query = "SELECT COUNT(*) FROM (" . $query . ") as total";
 $stmt = $dbh->prepare($count_query);
@@ -101,16 +59,24 @@ $offset = ($current_page - 1) * $per_page;
 // Get users with pagination
 $query .= " ORDER BY created_at DESC LIMIT " . (int)$per_page . " OFFSET " . (int)$offset;
 
-$stmt = $dbh->prepare($query);
-$stmt->execute($params);
-$users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $stmt = $dbh->prepare($query);
+    $stmt->execute($params);
+    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Debug: Check if roles are being fetched correctly
+    error_log("Users fetched: " . print_r($users, true));
+} catch (PDOException $e) {
+    error_log("Error fetching users: " . $e->getMessage());
+    $errors[] = "Error fetching users from database";
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Management - Progress Kit</title>
+    <title>User Management - EventPro Admin</title>
     <link rel="stylesheet" href="../assets/css/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
@@ -118,65 +84,7 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body class="light-mode">
     <!-- Sidebar -->
     <div class="sidebar">
-        <div class="sidebar-logo">
-            <img src="../assets/images/progress-kit-logo.png" alt="Progress Kit">
-        </div>
-        <nav class="sidebar-nav">
-            <ul>
-                <li>
-                    <a href="dashboard.php">
-                        <i class="fas fa-home"></i>
-                        <span>Dashboard</span>
-                    </a>
-                </li>
-                <li class="active">
-                    <a href="users.php">
-                        <i class="fas fa-users"></i>
-                        <span>User Management</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="events.php">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>Event Management</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="registrations.php">
-                        <i class="fas fa-clipboard-list"></i>
-                        <span>Registrations</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="announcements.php">
-                        <i class="fas fa-bullhorn"></i>
-                        <span>Announcements</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="reports.php">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>Reports & Analytics</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="settings.php">
-                        <i class="fas fa-cog"></i>
-                        <span>Settings</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
-        <div class="sidebar-footer">
-            <button id="theme-toggle" class="btn btn-icon">
-                <i class="fas fa-moon"></i>
-                <span>Dark Mode</span>
-            </button>
-            <a href="../logout.php" class="btn btn-danger">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Logout</span>
-            </a>
-        </div>
+        <?php include 'includes/sidebar.php'; ?>
     </div>
 
     <!-- Main Content -->
@@ -189,6 +97,20 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </a>
             </div>
 
+            <?php if (!empty($errors)): ?>
+                <div class="alert alert-danger">
+                    <?php foreach ($errors as $error): ?>
+                        <p><?php echo htmlspecialchars($error); ?></p>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($success_message)): ?>
+                <div class="alert alert-success">
+                    <p><?php echo htmlspecialchars($success_message); ?></p>
+                </div>
+            <?php endif; ?>
+
             <!-- Filters -->
             <div class="filters">
                 <select id="roleFilter" class="form-select">
@@ -196,11 +118,6 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <option value="admin">Admin</option>
                     <option value="super_user">Super User</option>
                     <option value="user">User</option>
-                </select>
-                <select id="statusFilter" class="form-select">
-                    <option value="">All Status</option>
-                    <option value="1">Active</option>
-                    <option value="0">Inactive</option>
                 </select>
             </div>
 
@@ -213,84 +130,44 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <th>Email</th>
                             <th>Phone</th>
                             <th>Role</th>
-                            <th>Status</th>
-                            <th>Created At</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($users as $user): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($user['full_name']); ?></td>
-                            <td><?php echo htmlspecialchars($user['email']); ?></td>
-                            <td><?php echo htmlspecialchars($user['phone']); ?></td>
-                            <td>
-                                <span class="badge bg-secondary"><?php echo ucfirst(str_replace('_', ' ', $user['role'])); ?></span>
-                            </td>
-                            <td>
-                                <span class="status-badge status-<?php echo $user['status'] ? 'active' : 'inactive'; ?>">
-                                    <?php echo $user['status'] ? 'Active' : 'Inactive'; ?>
-                                </span>
-                            </td>
-                            <td><?php echo date('M d, Y', strtotime($user['created_at'])); ?></td>
-                            <td>
-                                <button class="btn btn-sm btn-info edit-user" data-id="<?php echo $user['id']; ?>">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-danger delete-user" data-id="<?php echo $user['id']; ?>">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
+                        <?php if (!empty($users)): ?>
+                            <?php foreach ($users as $user): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($user['full_name'] ?? ''); ?></td>
+                                <td><?php echo htmlspecialchars($user['email'] ?? ''); ?></td>
+                                <td><?php echo htmlspecialchars($user['phone'] ?? ''); ?></td>
+                                <td>
+                                    <form method="POST" class="role-form">
+                                        <input type="hidden" name="action" value="update_role">
+                                        <input type="hidden" name="user_id" value="<?php echo htmlspecialchars($user['id'] ?? ''); ?>">
+                                        <select name="role" class="form-select">
+                                            <option value="admin" <?php echo (isset($user['role']) && $user['role'] === 'admin') ? 'selected' : ''; ?>>Admin</option>
+                                            <option value="super_user" <?php echo (isset($user['role']) && $user['role'] === 'super_user') ? 'selected' : ''; ?>>Super User</option>
+                                            <option value="user" <?php echo (isset($user['role']) && $user['role'] === 'user') ? 'selected' : ''; ?>>User</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-sm btn-danger delete-user" data-id="<?php echo htmlspecialchars($user['id'] ?? ''); ?>">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="5" class="text-center">No users found</td>
+                            </tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit User Modal -->
-    <div class="modal fade" id="editUserModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit User</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="editUserForm">
-                        <input type="hidden" id="editUserId" name="id">
-                        <input type="hidden" name="action" value="edit">
-                        
-                        <div class="mb-3">
-                            <label for="editFullName" class="form-label">Full Name</label>
-                            <input type="text" class="form-control" id="editFullName" name="full_name" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="editEmail" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="editEmail" name="email" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="editPhone" class="form-label">Phone</label>
-                            <input type="tel" class="form-control" id="editPhone" name="phone" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="editRole" class="form-label">Role</label>
-                            <select class="form-select" id="editRole" name="role" required>
-                                <option value="admin">Admin</option>
-                                <option value="super_user">Super User</option>
-                                <option value="user">User</option>
-                            </select>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="saveEdit">Save Changes</button>
-                </div>
             </div>
         </div>
     </div>
@@ -305,12 +182,14 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             const table = $('#usersTable').DataTable({
                 responsive: true,
                 pageLength: 10,
-                order: [[5, 'desc']] // Sort by created_at descending
-            });
-
-            // Search functionality
-            $('#searchInput').on('keyup', function() {
-                table.search(this.value).draw();
+                order: [[3, 'desc']], // Sort by role
+                language: {
+                    search: "Search users:",
+                    lengthMenu: "Show _MENU_ entries",
+                    info: "Showing _START_ to _END_ of _TOTAL_ users",
+                    infoEmpty: "Showing 0 to 0 of 0 users",
+                    infoFiltered: "(filtered from _MAX_ total users)"
+                }
             });
 
             // Role filter
@@ -318,56 +197,10 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 table.column(3).search(this.value).draw();
             });
 
-            // Status filter
-            $('#statusFilter').on('change', function() {
-                table.column(4).search(this.value).draw();
-            });
-
-            // Edit user
-            $('.edit-user').click(function() {
-                const userId = $(this).data('id');
-                const row = $(this).closest('tr');
-                
-                // Populate form with user data
-                $('#editUserId').val(userId);
-                $('#editFullName').val(row.find('td:eq(0)').text());
-                $('#editEmail').val(row.find('td:eq(1)').text());
-                $('#editPhone').val(row.find('td:eq(2)').text());
-                $('#editRole').val(row.find('td:eq(3) .badge').text().toLowerCase().replace(' ', '_'));
-                
-                // Show modal
-                $('#editUserModal').modal('show');
-            });
-
-            // Save edit
-            $('#saveEdit').click(function() {
-                const formData = new FormData($('#editUserForm')[0]);
-                
-                $.ajax({
-                    url: 'users.php',
-                    method: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        const data = typeof response === 'string' ? JSON.parse(response) : response;
-                        if (data.success) {
-                            location.reload();
-                        } else {
-                            alert('Error: ' + data.message);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        alert('Error: ' + error);
-                    }
-                });
-            });
-
             // Delete user
             $('.delete-user').click(function() {
                 if (confirm('Are you sure you want to delete this user?')) {
                     const userId = $(this).data('id');
-                    
                     $.ajax({
                         url: 'users.php',
                         method: 'POST',
@@ -389,22 +222,6 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     });
                 }
             });
-
-            // Theme toggle
-            $('#theme-toggle').click(function() {
-                $('body').toggleClass('dark-mode');
-                const isDarkMode = $('body').hasClass('dark-mode');
-                localStorage.setItem('darkMode', isDarkMode);
-                
-                const icon = $(this).find('i');
-                icon.toggleClass('fa-moon fa-sun');
-            });
-
-            // Check for saved theme preference
-            if (localStorage.getItem('darkMode') === 'true') {
-                $('body').addClass('dark-mode');
-                $('#theme-toggle i').removeClass('fa-moon').addClass('fa-sun');
-            }
         });
     </script>
 </body>

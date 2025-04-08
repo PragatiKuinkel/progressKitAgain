@@ -25,6 +25,18 @@
             </a>
         </li>
         <li>
+            <a href="users.php">
+                <i class="fas fa-users"></i>
+                <span>User Management</span>
+            </a>
+        </li>
+        <li>
+            <a href="events.php">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Event Management</span>
+            </a>
+        </li>
+        <li>
             <a href="announcements.php">
                 <i class="fas fa-bullhorn"></i>
                 <span>Announcements</span>
@@ -53,6 +65,13 @@
 
 <!-- Sidebar Footer -->
 <div class="sidebar-footer">
+    <!-- Dark/Light Mode Toggle (Commented Out) -->
+    <!--
+    <button id="theme-toggle" class="btn btn-icon">
+        <i class="fas fa-moon"></i>
+        <span>Dark Mode</span>
+    </button>
+    -->
     <a href="../logout.php" class="logout-btn">
         <i class="fas fa-sign-out-alt"></i>
         <span>Logout</span>
