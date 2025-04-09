@@ -1,5 +1,6 @@
 <?php
-require dirname(__DIR__) . '/vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../includes/dbconnection.php';
 
 use Ratchet\Server\IoServer;
 use Ratchet\Http\HttpServer;
@@ -7,18 +8,14 @@ use Ratchet\WebSocket\WsServer;
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
 
-class Chat implements MessageComponentInterface {
+class ChatServer implements MessageComponentInterface {
     protected $clients;
-    protected $db;
+    protected $dbh;
 
     public function __construct() {
         $this->clients = new \SplObjectStorage;
-        $this->db = new PDO(
-            "mysql:host=localhost;dbname=event_management",
-            "root",
-            "",
-            array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
-        );
+        $this->dbh = new PDO("mysql:host=localhost;dbname=event_management;charset=utf8", "root", "");
+        $this->dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
     public function onOpen(ConnectionInterface $conn) {
@@ -27,32 +24,26 @@ class Chat implements MessageComponentInterface {
     }
 
     public function onMessage(ConnectionInterface $from, $msg) {
-        $data = json_decode($msg, true);
-        
-        if ($data['type'] === 'message') {
-            // Store message in database
-            $stmt = $this->db->prepare("INSERT INTO messages (user_id, message) VALUES (?, ?)");
-            $stmt->execute([$data['user_id'], htmlspecialchars($data['message'])]);
+        try {
+            $data = json_decode($msg, true);
             
-            // Get user info
-            $stmt = $this->db->prepare("SELECT full_name, role FROM users WHERE id = ?");
-            $stmt->execute([$data['user_id']]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            // Prepare message for broadcast
-            $message = [
-                'type' => 'message',
-                'user_id' => $data['user_id'],
-                'username' => $user['full_name'],
-                'role' => $user['role'],
-                'message' => htmlspecialchars($data['message']),
-                'timestamp' => date('Y-m-d H:i:s')
-            ];
-            
-            // Broadcast to all clients
-            foreach ($this->clients as $client) {
-                $client->send(json_encode($message));
+            if (isset($data['message']) && isset($data['sender_role']) && isset($data['sender_id'])) {
+                // Store message in database
+                $stmt = $this->dbh->prepare("INSERT INTO messages (sender_role, sender_id, message) VALUES (?, ?, ?)");
+                $stmt->execute([$data['sender_role'], $data['sender_id'], $data['message']]);
+                
+                // Broadcast to all clients
+                foreach ($this->clients as $client) {
+                    $client->send(json_encode([
+                        'message' => $data['message'],
+                        'sender_role' => $data['sender_role'],
+                        'sender_id' => $data['sender_id'],
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]));
+                }
             }
+        } catch (Exception $e) {
+            echo "Error: " . $e->getMessage() . "\n";
         }
     }
 
@@ -70,7 +61,7 @@ class Chat implements MessageComponentInterface {
 $server = IoServer::factory(
     new HttpServer(
         new WsServer(
-            new Chat()
+            new ChatServer()
         )
     ),
     8080

@@ -50,21 +50,21 @@ if (isset($_SESSION['user_id'])) {
             </a>
         </li>
         <li>
-            <a href="users.php">
+            <a href="users.php" class="nav-link">
                 <i class="fas fa-users"></i>
-                <span>User Management</span>
+                <span>Users</span>
+            </a>
+        </li>
+        <li>
+            <a href="post_announcement.php" class="nav-link">
+                <i class="fas fa-bullhorn"></i>
+                <span>Post Announcement</span>
             </a>
         </li>
         <li>
             <a href="events.php">
                 <i class="fas fa-calendar-alt"></i>
                 <span>Event Management</span>
-            </a>
-        </li>
-        <li>
-            <a href="announcements.php">
-                <i class="fas fa-bullhorn"></i>
-                <span>Announcements</span>
             </a>
         </li>
         <li>

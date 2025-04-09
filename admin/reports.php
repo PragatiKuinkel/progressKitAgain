@@ -13,8 +13,7 @@ $totalEvents = '-';
 $completedEvents = '-';
 $upcomingEvents = '-';
 
-// TODO: Uncomment and implement database queries when ready
-/*
+// Include database connection
 require_once '../includes/dbconnection.php';
 
 try {
@@ -22,7 +21,14 @@ try {
     $stmt = $dbh->prepare("SELECT COUNT(*) AS total_users FROM users");
     $stmt->execute();
     $totalUsers = $stmt->fetch(PDO::FETCH_ASSOC)['total_users'];
+} catch (PDOException $e) {
+    error_log("Reports error (users count): " . $e->getMessage());
+    // Keep the default value if query fails
+}
 
+// TODO: Uncomment and implement other database queries when ready
+/*
+try {
     // Total events
     $stmt = $dbh->prepare("SELECT COUNT(*) AS total_events FROM events");
     $stmt->execute();

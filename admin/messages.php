@@ -1,22 +1,21 @@
 <?php
 session_start();
 
-// Check if user is logged in and is an admin
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
     header('Location: ../login.php');
     exit();
 }
 
 require_once '../includes/dbconnection.php';
 
-// Get recent messages
+// Fetch existing messages
 try {
     $stmt = $dbh->prepare("
-        SELECT m.*, u.full_name, u.role 
+        SELECT m.*, u.full_name, u.role as sender_role
         FROM messages m 
-        JOIN users u ON m.user_id = u.id 
-        ORDER BY m.created_at DESC 
-        LIMIT 50
+        JOIN users u ON m.sender_id = u.id 
+        ORDER BY m.created_at DESC
     ");
     $stmt->execute();
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -30,15 +29,17 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messages - EventPro Admin</title>
+    <title>Messages - Progress Kit</title>
     <link rel="stylesheet" href="../assets/css/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        /* Main Layout */
         body {
             height: 100vh;
             overflow: hidden;
             margin: 0;
             display: flex;
+            background-color: var(--light-bg);
         }
 
         .sidebar {
@@ -54,30 +55,19 @@ try {
             overflow: hidden;
         }
 
-        .content-wrapper {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .content-header {
-            padding: 20px;
-            background: var(--white);
-            border-bottom: 1px solid var(--border-color);
-        }
-
+        /* Chat Container */
         .chat-container {
             flex: 1;
             display: flex;
             flex-direction: column;
             background: var(--white);
             margin: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             overflow: hidden;
         }
 
+        /* Messages Area */
         .messages-area {
             flex: 1;
             overflow-y: auto;
@@ -87,103 +77,140 @@ try {
         }
 
         .message {
-            display: flex;
-            margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 8px;
+            max-width: 80%;
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            border-radius: 12px;
             background: var(--light-bg);
+            position: relative;
         }
 
         .message.admin {
             background: var(--primary-color);
             color: white;
+            margin-left: auto;
         }
 
-        .message-content {
-            flex: 1;
-            margin-left: 15px;
+        .message.user {
+            background: var(--white);
+            border: 1px solid var(--border-color);
+            margin-right: auto;
         }
 
         .message-header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 5px;
-            font-size: 0.9em;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 0.85em;
         }
 
-        .username {
-            font-weight: bold;
+        .sender-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .timestamp {
+        .sender-name {
+            font-weight: 600;
+        }
+
+        .sender-role {
+            font-size: 0.8em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .message-time {
             color: var(--text-muted);
+            font-size: 0.8em;
         }
 
-        .message-text {
+        .message-content {
             word-break: break-word;
+            line-height: 1.5;
         }
 
+        /* Input Area */
         .input-area {
-            padding: 20px;
+            padding: 16px;
             border-top: 1px solid var(--border-color);
             background: var(--white);
         }
 
         .message-form {
             display: flex;
-            gap: 10px;
+            gap: 12px;
+            align-items: flex-end;
         }
 
         .message-input {
             flex: 1;
-            padding: 10px;
+            padding: 12px;
             border: 1px solid var(--border-color);
-            border-radius: 4px;
+            border-radius: 8px;
             font-size: 1em;
+            resize: none;
+            min-height: 24px;
+            max-height: 120px;
+            transition: border-color 0.3s;
+        }
+
+        .message-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
         }
 
         .send-button {
-            padding: 10px 20px;
+            padding: 12px 24px;
             background: var(--primary-color);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .send-button:hover {
             background: var(--primary-hover);
         }
 
-        .message-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--primary-color);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-        }
-
-        /* Custom scrollbar */
+        /* Scrollbar Styling */
         .messages-area::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
         }
 
         .messages-area::-webkit-scrollbar-track {
-            background: var(--light-bg);
+            background: transparent;
         }
 
         .messages-area::-webkit-scrollbar-thumb {
             background: var(--border-color);
-            border-radius: 4px;
+            border-radius: 3px;
         }
 
         .messages-area::-webkit-scrollbar-thumb:hover {
             background: var(--text-muted);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .message {
+                max-width: 90%;
+            }
+            
+            .message-form {
+                flex-direction: column;
+            }
+            
+            .send-button {
+                width: 100%;
+                justify-content: center;
+            }
         }
     </style>
 </head>
@@ -195,34 +222,42 @@ try {
 
     <!-- Main Content -->
     <div class="main-content">
+        <!-- Messages Content -->
         <div class="content-wrapper">
             <div class="content-header">
                 <h1>Messages</h1>
             </div>
 
             <div class="chat-container">
-                <div class="messages-area" id="messagesArea">
+                <div class="messages-area" id="messagesContainer">
                     <?php foreach ($messages as $message): ?>
-                    <div class="message <?php echo $message['role'] === 'admin' ? 'admin' : ''; ?>">
-                        <div class="message-avatar">
-                            <?php echo strtoupper(substr($message['full_name'], 0, 1)); ?>
-                        </div>
-                        <div class="message-content">
+                        <div class="message <?php echo $message['sender_role'] === 'admin' ? 'admin' : 'user'; ?>">
                             <div class="message-header">
-                                <span class="username"><?php echo htmlspecialchars($message['full_name']); ?></span>
-                                <span class="timestamp"><?php echo date('M j, Y g:i A', strtotime($message['created_at'])); ?></span>
+                                <div class="sender-info">
+                                    <span class="sender-name"><?php echo htmlspecialchars($message['full_name']); ?></span>
+                                    <span class="sender-role"><?php echo ucfirst($message['sender_role']); ?></span>
+                                </div>
+                                <span class="message-time"><?php echo date('g:i A, M j', strtotime($message['created_at'])); ?></span>
                             </div>
-                            <div class="message-text"><?php echo htmlspecialchars($message['message']); ?></div>
+                            <div class="message-content">
+                                <?php echo nl2br(htmlspecialchars($message['message'])); ?>
+                            </div>
                         </div>
-                    </div>
                     <?php endforeach; ?>
                 </div>
 
                 <div class="input-area">
                     <form class="message-form" id="messageForm">
-                        <input type="text" class="message-input" id="messageInput" placeholder="Type your message..." required>
+                        <textarea 
+                            id="messageInput" 
+                            class="message-input" 
+                            placeholder="Type your message..." 
+                            rows="1"
+                            required
+                        ></textarea>
                         <button type="submit" class="send-button">
-                            <i class="fas fa-paper-plane"></i> Send
+                            <i class="fas fa-paper-plane"></i>
+                            <span>Send</span>
                         </button>
                     </form>
                 </div>
@@ -232,89 +267,78 @@ try {
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        $(document).ready(function() {
-            const userId = <?php echo $_SESSION['user_id']; ?>;
-            const username = "<?php echo $_SESSION['full_name']; ?>";
-            const role = "<?php echo $_SESSION['role']; ?>";
-            
-            // WebSocket connection
-            const ws = new WebSocket('ws://localhost:8080');
-            
-            ws.onopen = function() {
-                console.log('Connected to WebSocket server');
-            };
-            
-            ws.onmessage = function(event) {
-                const message = JSON.parse(event.data);
-                appendMessage(message);
-            };
-            
-            ws.onerror = function(error) {
-                console.error('WebSocket error:', error);
-            };
-            
-            ws.onclose = function() {
-                console.log('Disconnected from WebSocket server');
-            };
-            
-            // Handle message submission
-            $('#messageForm').on('submit', function(e) {
-                e.preventDefault();
-                const messageInput = $('#messageInput');
-                const message = messageInput.val().trim();
-                
-                if (message) {
-                    const data = {
-                        type: 'message',
-                        user_id: userId,
-                        message: message
-                    };
-                    
-                    ws.send(JSON.stringify(data));
-                    messageInput.val('');
-                }
-            });
-            
-            // Handle Enter key
-            $('#messageInput').on('keypress', function(e) {
-                if (e.which === 13 && !e.shiftKey) {
-                    e.preventDefault();
-                    $('#messageForm').submit();
-                }
-            });
-            
-            function appendMessage(message) {
-                const isAdmin = message.role === 'admin';
-                const messageHtml = `
-                    <div class="message ${isAdmin ? 'admin' : ''}">
-                        <div class="message-avatar">
-                            ${message.username.charAt(0).toUpperCase()}
-                        </div>
-                        <div class="message-content">
-                            <div class="message-header">
-                                <span class="username">${message.username}</span>
-                                <span class="timestamp">${formatTimestamp(message.timestamp)}</span>
-                            </div>
-                            <div class="message-text">${message.message}</div>
-                        </div>
-                    </div>
-                `;
-                
-                $('#messagesArea').prepend(messageHtml);
-                $('#messagesArea').scrollTop(0);
-            }
-            
-            function formatTimestamp(timestamp) {
-                const date = new Date(timestamp);
-                return date.toLocaleString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit'
-                });
+        // Auto-resize textarea
+        const textarea = document.getElementById('messageInput');
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        // WebSocket connection
+        const ws = new WebSocket('ws://localhost:8080');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageForm = document.getElementById('messageForm');
+        const messageInput = document.getElementById('messageInput');
+
+        // Connection opened
+        ws.onopen = function() {
+            console.log('Connected to WebSocket server');
+        };
+
+        // Listen for messages
+        ws.onmessage = function(event) {
+            const message = JSON.parse(event.data);
+            appendMessage(message);
+            scrollToBottom();
+        };
+
+        // Send message
+        messageForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+            if (message) {
+                ws.send(JSON.stringify({
+                    message: message,
+                    sender_role: '<?php echo $_SESSION['role']; ?>',
+                    sender_id: <?php echo $_SESSION['user_id']; ?>,
+                    sender_name: '<?php echo $_SESSION['full_name']; ?>'
+                }));
+                messageInput.value = '';
+                messageInput.style.height = 'auto';
             }
         });
+
+        // Append message to container
+        function appendMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${message.sender_role === 'admin' ? 'admin' : 'user'}`;
+            
+            const header = document.createElement('div');
+            header.className = 'message-header';
+            header.innerHTML = `
+                <div class="sender-info">
+                    <span class="sender-name">${message.sender_name}</span>
+                    <span class="sender-role">${message.sender_role.charAt(0).toUpperCase() + message.sender_role.slice(1)}</span>
+                </div>
+                <span class="message-time">${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+            `;
+            
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.textContent = message.message;
+            
+            messageDiv.appendChild(header);
+            messageDiv.appendChild(content);
+            messagesContainer.appendChild(messageDiv);
+        }
+
+        // Scroll to bottom
+        function scrollToBottom() {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Initial scroll to bottom
+        scrollToBottom();
     </script>
 </body>
 </html> 

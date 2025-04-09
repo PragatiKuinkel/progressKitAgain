@@ -1,4 +1,9 @@
 <?php
+// Enable error reporting
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 
 // Check if user is logged in and is an admin
@@ -10,13 +15,15 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 // Database connection
 require_once '../includes/dbconnection.php';
 
+// Initialize message variables
+$success_message = '';
+$error_messages = [];
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    header('Content-Type: application/json');
-    
     try {
         // Validate required fields
-        $required_fields = ['full_name', 'email', 'role', 'password'];
+        $required_fields = ['full_name', 'email', 'phone', 'role', 'password'];
         $errors = [];
         
         foreach ($required_fields as $field) {
@@ -30,6 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Invalid email format';
         }
         
+        // Validate phone format (basic validation)
+        if (!preg_match('/^[0-9]{10,15}$/', $_POST['phone'])) {
+            $errors[] = 'Invalid phone number format';
+        }
+        
         // Check if email already exists
         $stmt = $dbh->prepare("SELECT COUNT(*) FROM users WHERE email = ?");
         $stmt->execute([$_POST['email']]);
@@ -38,32 +50,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         if (!empty($errors)) {
-            echo json_encode(['success' => false, 'errors' => $errors]);
-            exit();
+            $error_messages = $errors;
+        } else {
+            // Hash password
+            $password_hash = password_hash($_POST['password'], PASSWORD_DEFAULT);
+            
+            // Insert user
+            $stmt = $dbh->prepare("
+                INSERT INTO users (full_name, email, phone, role, password)
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            
+            $stmt->execute([
+                $_POST['full_name'],
+                $_POST['email'],
+                $_POST['phone'],
+                $_POST['role'],
+                $password_hash
+            ]);
+            
+            $success_message = 'User created successfully';
+            
+            // Clear form data
+            $_POST = [];
         }
-        
-        // Hash password
-        $password_hash = password_hash($_POST['password'], PASSWORD_DEFAULT);
-        
-        // Insert user
-        $stmt = $dbh->prepare("
-            INSERT INTO users (full_name, email, role, password)
-            VALUES (?, ?, ?, ?)
-        ");
-        
-        $stmt->execute([
-            $_POST['full_name'],
-            $_POST['email'],
-            $_POST['role'],
-            $password_hash
-        ]);
-        
-        echo json_encode(['success' => true, 'message' => 'User created successfully']);
     } catch (PDOException $e) {
         error_log("Error creating user: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Error creating user']);
+        $error_messages[] = 'Error creating user: ' . $e->getMessage();
     }
-    exit();
 }
 ?>
 <!DOCTYPE html>
@@ -78,65 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="light-mode">
     <!-- Sidebar -->
     <div class="sidebar">
-        <div class="sidebar-logo">
-            <img src="../assets/images/progress-kit-logo.png" alt="Progress Kit">
-        </div>
-        <nav class="sidebar-nav">
-            <ul>
-                <li>
-                    <a href="dashboard.php">
-                        <i class="fas fa-home"></i>
-                        <span>Dashboard</span>
-                    </a>
-                </li>
-                <li class="active">
-                    <a href="users.php">
-                        <i class="fas fa-users"></i>
-                        <span>User Management</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="events.php">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>Event Management</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="registrations.php">
-                        <i class="fas fa-clipboard-list"></i>
-                        <span>Registrations</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="announcements.php">
-                        <i class="fas fa-bullhorn"></i>
-                        <span>Announcements</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="reports.php">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>Reports & Analytics</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="settings.php">
-                        <i class="fas fa-cog"></i>
-                        <span>Settings</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
-        <div class="sidebar-footer">
-            <button id="theme-toggle" class="btn btn-icon">
-                <i class="fas fa-moon"></i>
-                <span>Dark Mode</span>
-            </button>
-            <a href="../logout.php" class="btn btn-danger">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Logout</span>
-            </a>
-        </div>
+        <?php include 'includes/sidebar.php'; ?>
     </div>
 
     <!-- Main Content -->
@@ -170,69 +126,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="card">
                 <div class="card-body">
-                    <form id="addUserForm" class="needs-validation" novalidate>
-                        <!-- Basic Information Section -->
-                        <div class="form-section mb-4">
-                            <h3 class="section-title">User Information</h3>
-                            <div class="row g-4">
-                                <div class="col-md-6">
-                                    <label for="fullName" class="form-label">Full Name *</label>
-                                    <input type="text" class="form-control form-control-lg" id="fullName" name="full_name" required>
-                                    <div class="invalid-feedback">Please enter the full name</div>
-                                </div>
+                    <?php if ($success_message): ?>
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <?php echo htmlspecialchars($success_message); ?>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    <?php endif; ?>
 
-                                <div class="col-md-6">
-                                    <label for="email" class="form-label">Email Address *</label>
-                                    <input type="email" class="form-control form-control-lg" id="email" name="email" required>
-                                    <div class="invalid-feedback">Please enter a valid email address</div>
-                                </div>
+                    <?php if (!empty($error_messages)): ?>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <ul class="mb-0">
+                                <?php foreach ($error_messages as $error): ?>
+                                    <li><?php echo htmlspecialchars($error); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    <?php endif; ?>
 
-                                <div class="col-md-6">
-                                    <label for="role" class="form-label">Role *</label>
-                                    <select class="form-select form-select-lg" id="role" name="role" required>
-                                        <option value="">Select Role</option>
-                                        <option value="admin">Admin</option>
-                                        <option value="superuser">Superuser</option>
-                                        <option value="user">User</option>
-                                    </select>
-                                    <div class="invalid-feedback">Please select a role</div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <label for="password" class="form-label">Password *</label>
-                                    <input type="password" class="form-control form-control-lg" id="password" name="password" required>
-                                    <div class="invalid-feedback">Please enter a password</div>
-                                </div>
-                            </div>
+                    <form method="POST" action="add_user.php" class="needs-validation" novalidate>
+                        <div class="form-group mb-3">
+                            <label for="fullName" class="form-label">Full Name *</label>
+                            <input type="text" class="form-control" id="fullName" name="full_name" 
+                                   value="<?php echo isset($_POST['full_name']) ? htmlspecialchars($_POST['full_name']) : ''; ?>" required>
+                            <div class="invalid-feedback">Please enter full name.</div>
                         </div>
 
-                        <!-- Form Actions -->
-                        <div class="form-actions mt-4">
-                            <div class="d-flex justify-content-end gap-3">
-                                <a href="users.php" class="btn btn-lg btn-secondary">Cancel</a>
-                                <button type="submit" class="btn btn-lg btn-primary">Add User</button>
-                            </div>
+                        <div class="form-group mb-3">
+                            <label for="email" class="form-label">Email *</label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required>
+                            <div class="invalid-feedback">Please enter a valid email address.</div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="phone" class="form-label">Phone Number *</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                   value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>" 
+                                   pattern="[0-9]{10,15}" required>
+                            <div class="invalid-feedback">Please enter a valid phone number (10-15 digits).</div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="role" class="form-label">Role *</label>
+                            <select class="form-control" id="role" name="role" required>
+                                <option value="">Select Role</option>
+                                <option value="admin" <?php echo (isset($_POST['role']) && $_POST['role'] === 'admin') ? 'selected' : ''; ?>>Admin</option>
+                                <option value="super_user" <?php echo (isset($_POST['role']) && $_POST['role'] === 'super_user') ? 'selected' : ''; ?>>Super User</option>
+                                <option value="user" <?php echo (isset($_POST['role']) && $_POST['role'] === 'user') ? 'selected' : ''; ?>>User</option>
+                            </select>
+                            <div class="invalid-feedback">Please select a role.</div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="password" class="form-label">Password *</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            <div class="invalid-feedback">Please enter a password.</div>
+                        </div>
+
+                        <div class="form-actions d-flex justify-content-end mt-4">
+                            <a href="users.php" class="btn btn-secondary me-2">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Add User</button>
                         </div>
                     </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Confirmation Modal -->
-    <div class="modal fade" id="confirmationModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Confirm User Creation</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to add this user?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="confirmAdd">Yes, Add User</button>
                 </div>
             </div>
         </div>
@@ -241,63 +197,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        $(document).ready(function() {
-            console.log('Document ready');
-            
-            // Form validation
-            const form = document.getElementById('addUserForm');
-            form.addEventListener('submit', function(event) {
-                event.preventDefault();
-                console.log('Form submitted');
-                
-                if (!form.checkValidity()) {
-                    event.stopPropagation();
-                    form.classList.add('was-validated');
-                    console.log('Form validation failed');
-                    return;
-                }
-
-                // Show confirmation modal
-                $('#confirmationModal').modal('show');
-            });
-
-            // Handle confirmation
-            $('#confirmAdd').on('click', function() {
-                console.log('Confirm add clicked');
-                const formData = new FormData($('#addUserForm')[0]);
-                
-                // Log form data for debugging
-                for (let [key, value] of formData.entries()) {
-                    console.log(key + ': ' + value);
-                }
-                
-                $.ajax({
-                    url: 'add_user.php',
-                    method: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        console.log('Server response:', response);
-                        try {
-                            const data = typeof response === 'string' ? JSON.parse(response) : response;
-                            if (data.success) {
-                                window.location.href = 'users.php?success=1';
-                            } else {
-                                alert('Error: ' + (data.message || 'Unknown error occurred'));
-                            }
-                        } catch (e) {
-                            console.error('Error parsing response:', e);
-                            alert('Error processing server response');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('AJAX error:', {xhr, status, error});
-                        alert('Error: ' + error);
+        // Form validation
+        (function() {
+            'use strict';
+            const forms = document.querySelectorAll('.needs-validation');
+            Array.from(forms).forEach(form => {
+                form.addEventListener('submit', event => {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
                     }
-                });
+                    form.classList.add('was-validated');
+                }, false);
             });
-        });
+        })();
     </script>
 </body>
 </html> 
